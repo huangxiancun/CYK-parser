@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #define YYSTYPE char *
-extern FILE *yyin;
+extern FILE *yyin,*yyout;
 
 %}
 %token TOKEN LP RP
@@ -18,7 +18,7 @@ extern FILE *yyin;
 F:S|F S
 S:LP TOKEN C RP{
 	$$=strdup($2);
-	printf("%s->%s\n",$2,$3);
+	fprintf(yyout,"%s->%s\n",$2,$3);
 	free($2); free($3);
 	//printf("S->(%s C)\n",$$);
 }
@@ -63,9 +63,32 @@ int yyerror(char *msg){
 }
 
 int main(int argc,char** argv){
-	if(argc > 1)
-        yyin = fopen(argv[1], "r");
-    else
-        yyin = stdin;
-	return yyparse();
+	
+	yyout=fopen("../rules.txt","w");
+	if(!yyout){
+		printf("output stream open failed\n");
+		return 0;
+	}
+	const int maxi=150;
+	yyin=0;
+	for(int i=1;i<=maxi;i++){
+		char fileName[255]={0};
+		sprintf(fileName,"../Data/treebank/combined/wsj_%4d.mrg",i);
+		for(int j=0;j<strlen(fileName);j++)
+			if(fileName[j]==' ') fileName[j]='0';	
+		
+		fclose(yyin);
+		yyin=fopen(fileName,"r");
+		if(!yyin){
+			printf("[%d/%d] failed to open: %s\n"
+					"aborting...",i,maxi,fileName);
+			return 0;
+		}
+		printf("[%d/%d] working on: %s\n",i,maxi,fileName);
+		yyparse();		
+	}
+	fclose(yyin);
+	fclose(yyout);
+	printf("process complete\n");
+	return 0;
 }
