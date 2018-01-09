@@ -43,8 +43,8 @@ def regular(inputF):
     print(rules)'''
     #取消pass2: pass3中，拆分产生式右部串，会得到这些需要转义的符号，但是无法得知它需要转义
 
-    #pass 3 转换成CNF
-    keys=list(rules.keys()).copy
+    #pass 3 消除多叉产生式
+    keys=list(rules.keys()).copy()
     for keyi in keys:
         rSet=rules[keyi]
         for rightStr in rSet:
@@ -65,11 +65,38 @@ def regular(inputF):
                 rSet.remove(rightStr)
             elif len(rightSymL)==1:#单产生式
                 pass
+        if len(rSet)==0: del rules[keyi]
+    print(rules)
+    #pass 4 消除非终结符单生成式
+    '''
+    for keyi in list(rules.keys()).copy():
+        rSet=rules[keyi]
+        reCheck=True
+        while reCheck:
+            reCheck=False
+            rSetC=rSet.copy()
+            for rightStr in rSetC:
+                rightSymL=rightStr.split(' ')
+                if len(rightSymL)==1 and rightStr!=keyi:
+                    childRSet=rules.get(rightStr,set())
+                    if len(childRSet)>0:
+                        if len(childRSet)==1 and rightStr==childRSet.copy().pop():
+                            pass #右边是终结符
+                        else:
+                            rSet.remove(rightStr)
+                            rSet=rSet|childRSet
+                            rules[keyi]=rSet
+                            del rules[rightStr]
+                            reCheck = True
+                    else: #右边是终结符
+                        pass
+
+                elif len(rightSymL)==1 and rightStr==keyi:
+                    if len(rSet)==1 :pass #右边是终结符
+                    else: rSet.discard(rightStr)'''
 
 
-    #print(rules)
-
-
+    print(rules)
     return rules
 
 def parse(rules):
@@ -132,12 +159,24 @@ def tokenize(sentence,rules): # pass 1:词法分析,写成终结符序列.最大
     return terminal
 
 def parseSentence(terminal,rrules):#CYK 返回状态矩阵
-    #print(rrules)
+    print(rrules)
     N=len(terminal)
     V=[([None]*N)for i in range(N)]
     for i in range(N):
         t=terminal[i]
         V[i][i]=rrules[t]
+        recheck = True
+        while recheck:
+            recheck=False
+            Vii=V[i][i].copy()
+            for symbol in Vii:
+                parent=rrules.get(symbol,set())
+                #parent.discard(symbol)
+                before=len(V[i][i])
+                if len(parent)>0:
+                    V[i][i]=V[i][i]|parent
+                after=len(V[i][i])
+                if after>before :recheck=True
 
     for length in range(2,N+1): # 2..N
         for left in range(N-length+1):
@@ -155,13 +194,31 @@ def parseSentence(terminal,rrules):#CYK 返回状态矩阵
                 else:
                     right2=set()
                     for tuplei in V[k][left+length-1]:
-                        right2 = right2 | set(tuplei[0].split(' '))
+                        right2.add(tuplei[0])
                 #根据两个集合的积找所有k分割下可归约的左符号集合
                 if len(right1)>0 and len(right2)>0 :
                     leftSymbolSet=getLeft(rrules,right1,right2)
+                else: leftSymbolSet=set()
                 if len(leftSymbolSet)>0:
-                    leftSymbolSetStr=' '.join(leftSymbolSet)#不支持集合放入集合，取出的时候记得split
-                    V[left][left + length-1].add((leftSymbolSetStr,k))
+                    recheck = True
+                    while recheck:
+                        recheck = False
+                        leftSymbolSetC = leftSymbolSet.copy()
+                        for lsymbol in leftSymbolSetC:
+                            parent = rrules.get(lsymbol, set())
+                            #parent.discard(lsymbol)
+                            before = len(leftSymbolSet)
+                            if len(parent) > 0:
+                                leftSymbolSet = leftSymbolSet | parent
+                            after = len(leftSymbolSet)
+                            if after > before: recheck = True
+
+                    for leftSymbolSetStr in leftSymbolSet:
+                        V[left][left + length-1].add((leftSymbolSetStr,k))
+                        print('regular: {} {} to {} {} by {} k={}'.format(\
+                              left,terminal[left],left + length-1,terminal[left + length-1]\
+                              ,leftSymbolSetStr,k))
+
 
     return V
 
