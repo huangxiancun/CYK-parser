@@ -236,27 +236,32 @@ def treeStr(terminal,V,rules,i,j,leftSymbol):
         #所有(X,k)where X=leftSymbol
         for tuplei in V[i][j]:
             if tuplei[0]==leftSymbol:
-                #leftSymbol->r1 r2
+                #leftSymbol->?
                 k=tuplei[1]
                 for rightStr in rules[leftSymbol]:
                     rightList=rightStr.split(' ')
-                    r1=rightList[0]
-                    r2=rightList[1]
-                    if contains(V[i][k-1],r1) and contains(V[k][j],r2):
-                        right1=treeStr(terminal,V,rules,i,k-1,r1)
-                        right2=treeStr(terminal,V,rules,k,j,r2)
-                        for rs1 in right1:
-                            for rs2 in right2:
-                                subTree='('+leftSymbol+' '+rs1+' '+rs2+')'
-                                ret.append(subTree)
+                    if len(rightList)==2:
+                        r1=rightList[0]
+                        r2=rightList[1]
+                        if contains(V[i][k-1],r1) and contains(V[k][j],r2):
+                            right1=treeStr(terminal,V,rules,i,k-1,r1)
+                            right2=treeStr(terminal,V,rules,k,j,r2)
+                            for rs1 in right1:
+                                for rs2 in right2:
+                                    subTree='('+leftSymbol+' '+rs1+' '+rs2+')'
+                                    ret.append(subTree)
+                    else: pass
         if len(ret)==0:
             print("can't find subtree {} range {}\'{}\' to {}\'{}\'"\
                   .format(leftSymbol,i,terminal[i],j,terminal[j]))
         return ret
 
 
-def contains(setOfTuple,sym):
-    for t in setOfTuple:
+def contains(set,sym):
+    ele=set.copy().pop()
+    if type(ele)==type(' '):
+        return sym in set
+    for t in set:
         if t[0]==sym:return True
     return False
 
