@@ -6,6 +6,7 @@ import os
 def shell():
     #rules=regular("../rules1.txt") #{'left_symbol':{'right str'..}..}
     rules=regular("ruleT.txt")
+    #print(rRules(rules))
     parse(rules)
 
 def regular(inputF):
@@ -22,8 +23,7 @@ def regular(inputF):
             rightSymL.remove('-NONE-')
         if len(rightSymL)!=0:
             value=' '.join(rightSymL)
-            rules[key]=rules.get(key,set())
-            rules[key].add(value)
+            addRuleD(rules,key,value)
         #print(tokenL)
     if '-NONE-' in rules:
         del rules['-NONE-']
@@ -47,22 +47,23 @@ def regular(inputF):
     keys=list(rules.keys()).copy()
     for keyi in keys:
         rSet=rules[keyi]
-        for rightStr in rSet:
+        for rightTuple in rSet:#rightTuple : (rightStr,freq)
+            rightStr=rightTuple[0]
+            freq=rightTuple[1]
             rightSymL=rightStr.split(' ')
             if len(rightSymL)>2:
-                rSet.remove(rightStr)
+                rSet.remove(rightTuple)
                 newSym='_'.join(rightSymL[1:])
-                rSet.add(' '.join([rightSymL[0],newSym]))
-                newSymL=newSym.split('_')
+                rSet.add((' '.join([rightSymL[0],newSym]),freq))
+                newSymL=rightSymL[1:]
                 while len(newSymL)>1:
-                    rules[newSym]=rules.get(newSym,set())
                     nextNewSym='_'.join(newSymL[1:])
-                    newRightStr=' '.join([newSymL[0],nextNewSym])
-                    rules[newSym].add(newRightStr)
-                    del newSymL[0]
+                    rules[newSym]=set()
+                    rules[newSym].add((' '.join([newSymL[0],nextNewSym]),freq))
+                    newSymL=newSymL[1:]
                     newSym=nextNewSym
             elif len(rightSymL)==0:
-                rSet.remove(rightStr)
+                rSet.remove(rightTuple)
             elif len(rightSymL)==1:#单产生式
                 pass
         if len(rSet)==0: del rules[keyi]
@@ -95,6 +96,16 @@ def regular(inputF):
                     if len(rSet)==1 :pass #右边是终结符
                     else: rSet.discard(rightStr)'''
 
+    # pass 5 PCFG 归一化
+    for keyi in list(rules.keys()):
+        s=rules[keyi]
+        count=0
+        for ti in s:
+            count+=ti[1]
+        for ti in s.copy():
+            s.add((ti[0],ti[1]/count))
+            if ti[1]!=ti[1]/count:
+                s.remove(ti)
 
     #print(rules)
     return rules
@@ -169,7 +180,8 @@ def parseSentence(terminal,rrules):#CYK 返回状态矩阵
         while recheck:
             recheck=False
             Vii=V[i][i].copy()
-            for symbol in Vii:
+            for t in Vii:
+                symbol=t[0]
                 parent=rrules.get(symbol,set())
                 #parent.discard(symbol)
                 before=len(V[i][i])
@@ -194,70 +206,84 @@ def parseSentence(terminal,rrules):#CYK 返回状态矩阵
                 else:
                     right2=set()
                     for tuplei in V[k][left+length-1]:
-                        right2.add(tuplei[0])
+                        right2.add(tuplei)
                 #根据两个集合的积找所有k分割下可归约的左符号集合
                 if len(right1)>0 and len(right2)>0 :
                     leftSymbolSet=getLeft(rrules,right1,right2)
                 else: leftSymbolSet=set()
                 if len(leftSymbolSet)>0:
-                    recheck = True
+                    '''recheck = True
                     while recheck:
                         recheck = False
                         leftSymbolSetC = leftSymbolSet.copy()
-                        for lsymbol in leftSymbolSetC:
+                        for ti in leftSymbolSetC:
+                            lsymbol=ti[0]
                             parent = rrules.get(lsymbol, set())
                             #parent.discard(lsymbol)
                             before = len(leftSymbolSet)
                             if len(parent) > 0:
                                 leftSymbolSet = leftSymbolSet | parent
                             after = len(leftSymbolSet)
-                            if after > before: recheck = True
-
-                    for leftSymbolSetStr in leftSymbolSet:
+                            if after > before: recheck = True'''
+                    a=1
+                    for ti in leftSymbolSet:
+                        leftSymbolSetStr=ti[0]
                         V[left][left + length-1].add((leftSymbolSetStr,k))
                         #print('regular: {} {} to {} {} by {} k={}'.format(\
                         #      left,terminal[left],left + length-1,terminal[left + length-1]\
                         #      ,leftSymbolSetStr,k))
 
-
+    #print (V)
+    print('CYK fin')
     return V
 
 def printTree(terminal,stateMartix,rules,file):
     N=len(terminal)
     #print(stateMartix)
-    treeStringL=treeStr(terminal,stateMartix,rules,0,N-1,'S')
-    print("parse complete: {} results matched.".format(len(treeStringL)))
-    for s in treeStringL:
-        print(s)
+    tree=treeStr(terminal,stateMartix,rules,0,N-1,'S')
+    if tree[1]==0:
+        print("parse failed.")
+    else:
+        print("parse complete: result P={}".format(tree[1]))
+        print(tree[0])
 
 def treeStr(terminal,V,rules,i,j,leftSymbol):
     if i==j:
-        return ['('+leftSymbol+' '+terminal[i]+')']
+        p=childP(rules,[leftSymbol],terminal[i])
+        return tuple(['('+leftSymbol+' '+terminal[i]+')',p])
     else:
-        ret=[]
-        #所有(X,k)where X=leftSymbol
-        for tuplei in V[i][j]:
+        ret=tuple()
+
+        maxP = 0
+        maxRT1 = ''
+        maxRT2 = ''
+        for tuplei in V[i][j]: #所有(leftSymbol,k)
             if tuplei[0]==leftSymbol:
                 #leftSymbol->?
                 k=tuplei[1]
-                for rightStr in rules[leftSymbol]:#尝试用一个产生式匹配左右分段
+                for ti in rules[leftSymbol]:#尝试用一个产生式匹配左右分段
+                    rightStr=ti[0]
+                    p=ti[1]
                     rightList=rightStr.split(' ')
                     if len(rightList)==2:
                         r1=rightList[0]
                         r2=rightList[1]
-                        if contains(V[i][k-1],r1) and contains(V[k][j],r2):
-                            right1=treeStr(terminal,V,rules,i,k-1,r1)
-                            right2=treeStr(terminal,V,rules,k,j,r2)
-                            for rs1 in right1:
-                                for rs2 in right2:
-                                    subTree='('+leftSymbol+' '+rs1+' '+rs2+')'
-                                    ret.append(subTree)
+                        if contains(V[i][k-1],r1) and contains(V[k][j],r2):#use leftSymbol->r1 r2,k,p
+                            rightTree1=treeStr(terminal,V,rules,i,k-1,r1)
+                            rightTree2=treeStr(terminal,V,rules,k,j,r2)
+                            rp1=rightTree1[1]
+                            rp2=rightTree2[1]
+                            thisP=p*rp1*rp2
+                            if thisP>maxP:
+                                maxP=thisP
+                                maxRT1=rightTree1[0]
+                                maxRT2=rightTree2[0]
+                        else:pass
                     else: pass
-        if len(ret)==0:
-            pass
-            #print("can't find subtree {} range {}\'{}\' to {}\'{}\'"\
-            #      .format(leftSymbol,i,terminal[i],j,terminal[j]))
-        return ret
+        if maxP==0:
+            print("can't find subtree {} range {}\'{}\' to {}\'{}\'"\
+                  .format(leftSymbol,i,terminal[i],j,terminal[j]))
+        return tuple(['({} {} {})'.format(leftSymbol,maxRT1,maxRT2),maxP])
 
 def contains(set,sym):
     ele=set.copy().pop()
@@ -267,6 +293,23 @@ def contains(set,sym):
         if t[0]==sym:return True
     return False
 
+def addRule(set,right):#set元素为tuple:(产生式右串，频率)
+    flag=False
+    for t in set:
+        if t[0]==right:
+            flag=True
+            catch=t
+            break
+    if flag:
+        set.remove((right,catch[1]))
+        set.add((right,catch[1]+1))
+    else:
+        set.add((right,1))
+
+def addRuleD(dic,key,right):#dic为{key:set of (right,freq)}
+    dic[key]=dic.get(key,set())
+    addRule(dic[key],right)
+
 def key(dic,value): #find a key by given value
     return list(dic.keys())[list(dic.values()).index(value)]
 
@@ -274,26 +317,48 @@ def symbols(rules): #returns set of all symbols in rules
     ret=set()
     for keyi in list(rules.keys()):
         ret.add(keyi)
-        for symbol in rules[keyi]:
-            ret.add(symbol)
+        for t in rules[keyi]:
+            ret.add(t[0])
     return ret
 
 def rRules(rules): #returns reversed rules
     ret={}
     for keyi in list(rules.keys()):
-        for righti in rules[keyi]:
+        for ti in rules[keyi]:
+            righti=ti[0]
+            p=ti[1]
             ret[righti]=ret.get(righti,set())
-            ret[righti].add(keyi)
+            ret[righti].add((keyi,p))
     return ret
 
-def getLeft(rrules,right1,right2): #return rrules[right1 × right2]
+def getLeft(rrules,right1,right2): #return rrules[{right1} ×{' '}× {right2}]
     ret=set()
     for rsym1 in right1:
         for rsym2 in right2:
-            rstr=' '.join([rsym1,rsym2])
+            if type(rsym1)==type(tuple()):
+                r1str=rsym1[0]
+            else: r1str=rsym1
+            if type(rsym2)==type(tuple()):
+                r2str=rsym2[0]
+            else: r2str=rsym2
+            rstr=' '.join([r1str,r2str])
             leftSeti=rrules.get(rstr,set())
             ret=ret|leftSeti
     return ret
+
+def childP(rules,leftL,t):
+    rSet=rules.get(leftL[-1],set())
+    for ti in rSet:
+        if t==ti[0]:
+            return ti[1]
+    for ti in rSet:
+        rL=ti[0].split(' ')
+        if len(rL)==1 and not ti[0] in leftL[:-1]:
+            p=childP(rules,leftL+[ti[0]],t)*ti[1]
+            if p>0: return p
+    return 0
+
+
 
 if __name__ == '__main__':
     shell()

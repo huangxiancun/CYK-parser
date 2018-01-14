@@ -63,15 +63,27 @@ int yyerror(char *msg){
 }
 
 int main(int argc,char** argv){
+	if(argc!=3){
+		printf("Usage: learn i j\n"
+		"learn grammar from wsj_i to wsj_j");
+		return 0;
+	}
+	int starti=atoi(argv[1]);
+	int maxi=atoi(argv[2]);
+	if(starti>maxi || maxi<=0 || maxi>199
+		||starti>199 ||starti <=0){
+		printf("parameter out of range: 1 to 199\n");
+		return 0;
+	}
 	
 	yyout=fopen("../rules.txt","w");
 	if(!yyout){
 		printf("output stream open failed\n");
 		return 0;
 	}
-	const int maxi=150;
+	
 	yyin=0;
-	for(int i=1;i<=maxi;i++){
+	for(int i=starti;i<=maxi;i++){
 		char fileName[255]={0};
 		sprintf(fileName,"../Data/treebank/combined/wsj_%4d.mrg",i);
 		for(int j=0;j<strlen(fileName);j++)
@@ -81,10 +93,10 @@ int main(int argc,char** argv){
 		yyin=fopen(fileName,"r");
 		if(!yyin){
 			printf("[%d/%d] failed to open: %s\n"
-					"aborting...",i,maxi,fileName);
+					"aborting...",i,maxi-starti+1,fileName);
 			return 0;
 		}
-		printf("[%d/%d] working on: %s\n",i,maxi,fileName);
+		printf("[%d/%d] working on: %s\n",i,maxi-starti+1,fileName);
 		yyparse();		
 	}
 	fclose(yyin);
