@@ -102,7 +102,7 @@ def regular(inputF):
 def parse(rules):
     #print(rules)
     for i in range(1,2):
-        fNum='{}{}{}{}'.format(i//1000%10,i//100%10,i//10%10,i%10)
+        #fNum='{}{}{}{}'.format(i//1000%10,i//100%10,i//10%10,i%10)
         #inputF="../Data/treebank/raw/wsj_{}".format(fNum)
         inputF="textT.txt"
         #outputF="./parsed/wsj_{}.out".format(fNum)

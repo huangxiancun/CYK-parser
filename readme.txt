@@ -1,17 +1,26 @@
 程序运行环境：
 	Data/treebank/： 数据：将Data/treebank.zip解压
-	rules.txt:learn.exe学习输出的文法序列
-	learn/parse.y ：yacc移进-规约解析器代码
-	learn/word.lex ：lex词法分析器代码
-	learn/build.bat ：自动编译以上两个文件，生成learn/learn.exe。依赖win_flex.exe和win_bison.exe，他们是windows版的Lex和Yacc，依赖gcc（Lex/Yacc实际上是C语言框架，因此需要一个C编译器）
-	learn/learn.cmd ：使用这个脚本，输入学习数据的范围(wsj_i到wsj_j)，自动学习输出到rules.txt
 	
-	parse/ruleT.txt：parse.py和parsePCFG.py的输入文件，文法序列
-	parse/textT.txt：parse.py和parsePCFG.py的输入文件，待解析的句子
-	parse/parse.py：CYK CFG解析器, python3.6
-	parse/parsePCFG.py: CYK PCFG解析程序, python3.6
+	rules.txt：	learn.exe输出的文法，每行为一个生成式
+	learn/parse.y ：	yacc移进-规约解析器代码
+	learn/word.lex ：	lex词法分析器代码
+	learn/build.bat ：	自动编译以上两个文件，生成learn/learn.exe。依赖win_flex.exe和win_bison.exe，他们是windows版的Lex和Yacc，依赖gcc（Lex/Yacc实际上是C语言框架，因此需要一个C编译器）
+	learn/learn.cmd ：	使用这个脚本，输入学习数据的范围(wsj_i到wsj_j)，自动学习输出到rules.txt
 	
-方法描述：
+	parse/ruleT.txt：	parse.py和parsePCFG.py的输入文件，文法序列
+	parse/textT.txt：	parse.py和parsePCFG.py的输入文件，待解析的句子
+	parse/parse.py：	CYK CFG解析器, python3.6
+	parse/parsePCFG.py: 	CYK PCFG解析程序, python3.6
+	
+使用方法：
+	在Data/下解压treebank.zip，得到数据在Data/treebank/下。
+	运行learn/build.bat，编译learn.exe
+	运行learn/learn.cmd，得到rules.txt
+	复制rules.txt到parse/ruleT.txt
+	在parse/textT.txt中写你的英文句子，第一行以.START开头，之后每行一个句子。
+	运行parse/parse.py或parse/parsePCFG.py
+	
+描述：
 	学习文法：
 		学习文法的程序在learn目录下。
 		数据Data\treebank\combined\wsj0001.mrg~wsj0199.mrg是分析好的语法树。使用YACC/Lex从这些语法树中学习CFG，写入rules.txt，每行一个产生式。
