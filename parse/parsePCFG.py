@@ -69,6 +69,7 @@ def regular(inputF):
         if len(rSet)==0: del rules[keyi]
     #print(rules)
     #pass 4 消除非终结符单生成式
+	#取消pass4：单生成式总是产生终结符，在CYK中处理。
     '''
     for keyi in list(rules.keys()).copy():
         rSet=rules[keyi]
@@ -116,8 +117,8 @@ def parse(rules):
         fNum='{}{}{}{}'.format(i//1000%10,i//100%10,i//10%10,i%10)
         #inputF="../Data/treebank/raw/wsj_{}".format(fNum)
         inputF="textT.txt"
-        outputF="./parsed/wsj_{}.out".format(fNum)
-
+        #outputF="./parsed/wsj_{}.out".format(fNum)
+        outputF = "./parsed/parsePCFG.out"
         os.makedirs('./parsed/',exist_ok=True)
         file=open(outputF, 'w')
         sentences=open(inputF,'r').read().split('\n')[1:]
@@ -241,11 +242,17 @@ def printTree(terminal,stateMartix,rules,file):
     N=len(terminal)
     #print(stateMartix)
     tree=treeStr(terminal,stateMartix,rules,0,N-1,'S')
+    file.write('{} Non-terminal symbols\n'.format(len(rules)))
+    file.write('Sentence:{}\n'.format(' '.join(terminal)))
     if tree[1]==0:
+        file.write("parse failed.\n")
         print("parse failed.")
     else:
         print("parse complete: result P={}".format(tree[1]))
         print(tree[0])
+        file.write(tree[0])
+        file.write('\nP={}\n'.format(tree[1]))
+    file.write('\n')
 
 def treeStr(terminal,V,rules,i,j,leftSymbol):
     if i==j:
